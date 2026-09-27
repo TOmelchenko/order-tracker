@@ -6,7 +6,8 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel, Field
 
 from app.telemetry import setup_telemetry
@@ -107,6 +108,11 @@ def health():
     with connect() as db:
         db.execute("SELECT 1")
     return {"status": "ok"}
+
+
+@app.get("/metrics")
+def prometheus_metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/api/orders")

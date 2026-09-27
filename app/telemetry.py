@@ -1,6 +1,7 @@
 import logging
 
 from opentelemetry import metrics, trace
+from opentelemetry.exporter.prometheus import PrometheusMetricReader
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import ConsoleLogRecordExporter, SimpleLogRecordProcessor
@@ -21,9 +22,10 @@ def setup_telemetry(app):
     tracer_provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
     trace.set_tracer_provider(tracer_provider)
 
-    # Short export interval so `docker compose logs app` shows metrics without a long wait.
-    metric_reader = PeriodicExportingMetricReader(ConsoleMetricExporter(), export_interval_millis=10000)
-    meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+    # Console reader for `docker compose logs app`, Prometheus reader for scraping at /metrics.
+    console_reader = PeriodicExportingMetricReader(ConsoleMetricExporter(), export_interval_millis=10000)
+    prometheus_reader = PrometheusMetricReader()
+    meter_provider = MeterProvider(resource=resource, metric_readers=[console_reader, prometheus_reader])
     metrics.set_meter_provider(meter_provider)
 
     logger_provider = LoggerProvider(resource=resource)

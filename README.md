@@ -22,6 +22,12 @@ ORDER_TRACKER_PORT=18080 docker compose up --build -d --wait
 
 Run tests with `uv run --frozen pytest -q`. Stop the app with `docker compose down`. Add `-v` only if you also want to delete the order data.
 
+## Observability
+
+The app exports traces, metrics, and logs via OpenTelemetry. Traces and logs print to the console (`docker compose logs app`); metrics are also exposed at `/metrics` for Prometheus to scrape.
+
+Prometheus is at <http://127.0.0.1:9090>, and Grafana is at <http://127.0.0.1:3000> (anonymous access, no login needed) with a provisioned "Order Tracker" dashboard showing request counts by route and HTTP status code.
+
 ## API
 
 | Method | Path | Purpose |

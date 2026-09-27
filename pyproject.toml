@@ -9,6 +9,7 @@ dependencies = [
   "opentelemetry-api>=1.27,<2",
   "opentelemetry-sdk>=1.27,<2",
   "opentelemetry-instrumentation-fastapi>=0.48b0",
+  "opentelemetry-exporter-prometheus>=0.48b0",
 ]
 
 [dependency-groups]
