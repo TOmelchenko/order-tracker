@@ -1,0 +1,9 @@
+[project]
+name = "incident-response"
+version = "0.1.0"
+description = "Receives Grafana alerts, captures diagnostic context, and kicks off an automated investigation"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.30,<1",
+]

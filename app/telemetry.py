@@ -1,4 +1,6 @@
 import logging
+import os
+from pathlib import Path
 
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.prometheus import PrometheusMetricReader
@@ -13,13 +15,24 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExport
 
 SERVICE_NAME = "order-tracker"
 
+# When set, traces and logs are also written here (in addition to stdout) so the
+# incident-response service can read them without needing Docker socket access.
+SHARED_TELEMETRY_LOG_PATH = os.getenv("OTEL_FILE_LOG_PATH")
+
 
 def setup_telemetry(app):
     """Wire up console-exported traces, metrics, and logs and instrument the FastAPI app."""
     resource = Resource.create({"service.name": SERVICE_NAME})
 
+    shared_file = None
+    if SHARED_TELEMETRY_LOG_PATH:
+        Path(SHARED_TELEMETRY_LOG_PATH).parent.mkdir(parents=True, exist_ok=True)
+        shared_file = open(SHARED_TELEMETRY_LOG_PATH, "a", buffering=1)
+
     tracer_provider = TracerProvider(resource=resource)
     tracer_provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
+    if shared_file:
+        tracer_provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter(out=shared_file)))
     trace.set_tracer_provider(tracer_provider)
 
     # Console reader for `docker compose logs app`, Prometheus reader for scraping at /metrics.
@@ -30,6 +43,8 @@ def setup_telemetry(app):
 
     logger_provider = LoggerProvider(resource=resource)
     logger_provider.add_log_record_processor(SimpleLogRecordProcessor(ConsoleLogRecordExporter()))
+    if shared_file:
+        logger_provider.add_log_record_processor(SimpleLogRecordProcessor(ConsoleLogRecordExporter(out=shared_file)))
     handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
     root_logger = logging.getLogger()
     root_logger.addHandler(handler)

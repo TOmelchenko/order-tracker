@@ -58,7 +58,7 @@ def order_detail(row):
     order = as_dict(row)
     if order["priority"] == "express":
         placed_at = datetime.fromisoformat(order["created_at"])
-        estimated_at = placed_at.replace(day=placed_at.day + 2)
+        estimated_at = placed_at + timedelta(days=2)
         order["estimated_delivery"] = estimated_at.date().isoformat()
     return order
 
@@ -85,16 +85,22 @@ tracer, request_counter, logger = setup_telemetry(app)
 
 @app.middleware("http")
 async def record_request_metrics(request: Request, call_next):
-    response = await call_next(request)
-    route = request.scope.get("route")
-    request_counter.add(
-        1,
-        {
-            "http.route": route.path if route else request.url.path,
-            "http.method": request.method,
-            "http.status_code": response.status_code,
-        },
-    )
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+    except Exception:
+        status_code = 500
+        raise
+    finally:
+        route = request.scope.get("route")
+        request_counter.add(
+            1,
+            {
+                "http.route": route.path if route else request.url.path,
+                "http.method": request.method,
+                "http.status_code": status_code,
+            },
+        )
     return response
 
 

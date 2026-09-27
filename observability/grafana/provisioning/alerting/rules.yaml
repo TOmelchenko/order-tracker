@@ -1,0 +1,53 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: order-tracker-alerts
+    folder: Order Tracker
+    interval: 1m
+    rules:
+      - uid: order-tracker-5xx-responses
+        title: 5xx responses on order-tracker
+        condition: B
+        data:
+          # Count 5xx responses per endpoint over the last 5 minutes. `or on() vector(0)`
+          # keeps this returning a value even when the 5xx series has never been
+          # recorded, so a quiet period reads as 0 instead of "no data".
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: sum by (http_route) (increase(app_http_server_requests_total{http_status_code=~"5.."}[5m])) or on() vector(0)
+              instant: true
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: B
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+        noDataState: OK
+        execErrState: Alerting
+        for: 0s
+        annotations:
+          summary: "5xx responses on {{ $labels.http_route }}"
+          description: >-
+            {{ $values.A }} 5xx response(s) on endpoint {{ $labels.http_route }} in the
+            last 5 minutes. Dashboard: http://localhost:3000/d/order-tracker-requests/order-tracker
+          __dashboardUid__: order-tracker-requests
+          __panelId__: "1"
+        labels:
+          severity: critical
+        isPaused: false

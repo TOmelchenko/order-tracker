@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 data/
 .env
+incident-response/telemetry/
+incident-response/incidents/
+incident-response/claude-config/
+incident-response/claude-home.json

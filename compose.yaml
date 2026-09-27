@@ -8,8 +8,11 @@ services:
       - "127.0.0.1:${ORDER_TRACKER_PORT:-8000}:8000"
     environment:
       ORDER_DB_PATH: /data/orders.db
+      OTEL_FILE_LOG_PATH: /telemetry/otel.log
     volumes:
       - orders:/data
+      - ./incident-response/telemetry:/telemetry
+      - ./app:/app/app
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
@@ -42,6 +45,23 @@ services:
     restart: unless-stopped
     depends_on:
       - prometheus
+
+  incident-responder:
+    build: ./incident-response
+    ports:
+      - "127.0.0.1:${INCIDENT_RESPONDER_PORT:-8001}:8001"
+    environment:
+      OTEL_FILE_LOG_PATH: /telemetry/otel.log
+      DASHBOARD_URL: http://localhost:${GRAFANA_PORT:-3000}/d/order-tracker-requests/order-tracker
+    volumes:
+      - ./incident-response/telemetry:/telemetry:ro
+      - ./incident-response/incidents:/incidents
+      - ./incident-response/claude-config:/home/responder/.claude
+      - ./incident-response/claude-home.json:/home/responder/.claude.json
+      - ./app:/workspace/app
+    restart: unless-stopped
+    depends_on:
+      - app
 
 volumes:
   orders:
